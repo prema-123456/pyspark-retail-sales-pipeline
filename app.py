@@ -1,32 +1,19 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, to_date, sum
+import pandas as pd
 import streamlit as st
 
 st.title("📊 Retail Sales Dashboard")
 
-# Start Spark
-spark = SparkSession.builder.appName("Retail App").getOrCreate()
+df = pd.read_csv("data/sales.csv")
 
-# Load Data
-df = spark.read.csv("data/sales.csv", header=True, inferSchema=True)
+df["total_price"] = df["price"] * df["quantity"]
 
-# Cleaning
-df = df.dropna()
-df = df.withColumn("date", to_date(col("date"), "yyyy-MM-dd"))
-
-# Feature Engineering
-df = df.withColumn("total_price", col("price") * col("quantity"))
-
-# KPI
-total_revenue = df.select(sum("total_price")).collect()[0][0]
+total_revenue = df["total_price"].sum()
 st.metric("Total Revenue", f"₹{total_revenue}")
 
-# Category Sales
 st.subheader("Category-wise Sales")
-category_sales = df.groupBy("category").sum("total_price").toPandas()
+category_sales = df.groupby("category")["total_price"].sum().reset_index()
 st.dataframe(category_sales)
 
-# City Sales
 st.subheader("City-wise Sales")
-city_sales = df.groupBy("city").sum("total_price").toPandas()
+city_sales = df.groupby("city")["total_price"].sum().reset_index()
 st.dataframe(city_sales)
